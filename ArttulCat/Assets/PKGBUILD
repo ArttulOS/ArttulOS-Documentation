@@ -1,0 +1,66 @@
+# Maintainer: Your Name <you@example.com>
+pkgname=arttulcat
+pkgver=0.0.1
+pkgrel=1
+pkgdesc="ArttulCat - A lightweight, privacy-respecting Firefox fork"
+arch=('x86_64')
+url="https://github.com/Sprunglesonthehub/gecko-dev-arttulcat"
+license=('MPL2')
+depends=(
+  'gtk3' 'libx11' 'libxt' 'alsa-lib' 'dbus-glib' 'nss'
+  'gdk-pixbuf2' 'libevent' 'startup-notification' 'mime-types'
+)
+makedepends=(
+  'git' 'autoconf2.13' 'zip' 'unzip' 'yasm' 'clang' 'lld'
+  'nodejs' 'rust' 'python' 'python-setuptools' 'cargo'
+  'imake' 'mesa' 'libvpx'
+)
+source=("git+https://github.com/Sprunglesonthehub/gecko-dev-arttulcat.git")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$srcdir/gecko-dev-arttulcat"
+
+  cat > .mozconfig <<EOF
+ac_add_options --enable-application=browser
+ac_add_options --prefix=/usr
+ac_add_options --enable-optimize
+ac_add_options --disable-debug
+ac_add_options --enable-release
+ac_add_options --disable-tests
+ac_add_options --enable-strip
+ac_add_options --enable-rust-simd
+export MOZBUILD_STATE_PATH=$srcdir/mozbuild
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-build
+EOF
+}
+
+build() {
+  cd "$srcdir/gecko-dev-arttulcat"
+  ./mach build
+}
+
+package() {
+  cd "$srcdir/gecko-dev-arttulcat"
+  DESTDIR="$pkgdir" ./mach install
+
+  # Rename the binary for branding
+  mv "$pkgdir/usr/bin/firefox" "$pkgdir/usr/bin/arttulcat"
+
+  # Install icon
+  install -Dm644 browser/branding/official/default128.png "$pkgdir/usr/share/pixmaps/arttulcat.png"
+
+  # Create .desktop file
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/arttulcat.desktop" <<EOF
+[Desktop Entry]
+Name=ArttulCat Web Browser
+GenericName=Web Browser
+Comment=Browse the Web the ArttulCat way
+Exec=arttulcat %u
+Icon=arttulcat
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+EOF
+}
